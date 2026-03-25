@@ -1,4 +1,5 @@
-import os
+import json
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -12,6 +13,7 @@ from django.views.decorators.http import require_http_methods
 from .models import StoredFile
 
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -39,6 +41,7 @@ def file_to_dict(file_obj):
 
 def require_auth(request):
     if not request.user.is_authenticated:
+        logger.warning('Unauthorized access attempt to storage endpoint.')
         return JsonResponse(
             {'error': 'Требуется аутентификация.'},
             status=401,
@@ -51,8 +54,19 @@ def get_target_user(request):
         user_id = request.GET.get('user_id')
         if user_id:
             try:
-                return User.objects.get(pk=user_id)
+                target_user = User.objects.get(pk=user_id)
+                logger.debug(
+                    'Admin %s requested files for user_id=%s.',
+                    request.user.username,
+                    user_id,
+                )
+                return target_user
             except User.DoesNotExist:
+                logger.warning(
+                    'Admin %s requested files for non-existing user_id=%s.',
+                    request.user.username,
+                    user_id,
+                )
                 return None
     return request.user
 
@@ -61,11 +75,22 @@ def get_file_for_request(request, file_id):
     try:
         file_obj = StoredFile.objects.select_related('owner').get(pk=file_id)
     except StoredFile.DoesNotExist:
+        logger.warning(
+            'User %s requested non-existing file id=%s.',
+            request.user.username,
+            file_id,
+        )
         return None, JsonResponse({'error': 'Файл не найден.'}, status=404)
 
     if request.user.is_staff or file_obj.owner_id == request.user.id:
         return file_obj, None
 
+    logger.warning(
+        'User %s tried to access forbidden file id=%s owned by %s.',
+        request.user.username,
+        file_id,
+        file_obj.owner.username,
+    )
     return None, JsonResponse({'error': 'Недостаточно прав доступа.'}, status=403)
 
 
@@ -86,6 +111,13 @@ def files_list_view(request):
         return JsonResponse({'error': 'Пользователь не найден.'}, status=404)
 
     files = StoredFile.objects.filter(owner=target_user).select_related('owner')
+
+    logger.info(
+        'User %s requested file list for user %s. Files count: %s.',
+        request.user.username,
+        target_user.username,
+        files.count(),
+    )
 
     return JsonResponse(
         {
@@ -110,6 +142,7 @@ def file_upload_view(request):
     comment = request.POST.get('comment', '').strip()
 
     if uploaded_file is None:
+        logger.warning('User %s attempted upload without file.', request.user.username)
         return JsonResponse({'error': 'Файл не передан.'}, status=400)
 
     user = request.user
@@ -135,6 +168,14 @@ def file_upload_view(request):
         comment=comment,
     )
 
+    logger.info(
+        'User %s uploaded file "%s" (%s bytes). Stored as "%s".',
+        user.username,
+        original_name,
+        uploaded_file.size,
+        stored_name,
+    )
+
     return JsonResponse(
         {
             'message': 'Файл успешно загружен.',
@@ -156,9 +197,23 @@ def file_delete_view(request, file_id):
         return error_response
 
     absolute_path = Path(settings.MEDIA_ROOT) / file_obj.file_path
+    original_name = file_obj.original_name
 
     if absolute_path.exists():
         absolute_path.unlink()
+        logger.info(
+            'User %s deleted file "%s" (id=%s) from disk.',
+            request.user.username,
+            original_name,
+            file_id,
+        )
+    else:
+        logger.warning(
+            'User %s deleted file record "%s" (id=%s), but file was missing on disk.',
+            request.user.username,
+            original_name,
+            file_id,
+        )
 
     file_obj.delete()
 
@@ -179,23 +234,45 @@ def file_rename_view(request, file_id):
     if error_response:
         return error_response
 
-    import json
-
     try:
         data = json.loads(request.body.decode('utf-8'))
     except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning(
+            'User %s sent invalid JSON while renaming file id=%s.',
+            request.user.username,
+            file_id,
+        )
         return JsonResponse({'error': 'Некорректный JSON.'}, status=400)
 
     new_name = str(data.get('original_name', '')).strip()
 
     if not new_name:
+        logger.warning(
+            'User %s attempted to rename file id=%s with empty name.',
+            request.user.username,
+            file_id,
+        )
         return JsonResponse({'error': 'Новое имя файла обязательно.'}, status=400)
 
     if len(new_name) > 255:
+        logger.warning(
+            'User %s attempted to rename file id=%s with too long name.',
+            request.user.username,
+            file_id,
+        )
         return JsonResponse({'error': 'Имя файла слишком длинное.'}, status=400)
 
+    old_name = file_obj.original_name
     file_obj.original_name = new_name
     file_obj.save(update_fields=['original_name'])
+
+    logger.info(
+        'User %s renamed file id=%s from "%s" to "%s".',
+        request.user.username,
+        file_id,
+        old_name,
+        new_name,
+    )
 
     return JsonResponse(
         {
@@ -217,17 +294,26 @@ def file_comment_view(request, file_id):
     if error_response:
         return error_response
 
-    import json
-
     try:
         data = json.loads(request.body.decode('utf-8'))
     except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning(
+            'User %s sent invalid JSON while updating comment for file id=%s.',
+            request.user.username,
+            file_id,
+        )
         return JsonResponse({'error': 'Некорректный JSON.'}, status=400)
 
     comment = str(data.get('comment', '')).strip()
 
     file_obj.comment = comment
     file_obj.save(update_fields=['comment'])
+
+    logger.info(
+        'User %s updated comment for file id=%s.',
+        request.user.username,
+        file_id,
+    )
 
     return JsonResponse(
         {
@@ -251,10 +337,22 @@ def file_download_view(request, file_id):
     absolute_path = Path(settings.MEDIA_ROOT) / file_obj.file_path
 
     if not absolute_path.exists():
+        logger.error(
+            'User %s tried to download file id=%s, but file is missing on disk.',
+            request.user.username,
+            file_id,
+        )
         return JsonResponse({'error': 'Файл на диске не найден.'}, status=404)
 
     file_obj.last_downloaded_at = timezone.now()
     file_obj.save(update_fields=['last_downloaded_at'])
+
+    logger.info(
+        'User %s downloaded file "%s" (id=%s).',
+        request.user.username,
+        file_obj.original_name,
+        file_id,
+    )
 
     return FileResponse(
         absolute_path.open('rb'),
@@ -277,6 +375,17 @@ def file_public_link_view(request, file_id):
     if not file_obj.public_token:
         file_obj.public_token = uuid4().hex
         file_obj.save(update_fields=['public_token'])
+        logger.info(
+            'User %s generated public link for file id=%s.',
+            request.user.username,
+            file_id,
+        )
+    else:
+        logger.info(
+            'User %s requested existing public link for file id=%s.',
+            request.user.username,
+            file_id,
+        )
 
     return JsonResponse(
         {
@@ -293,15 +402,27 @@ def public_file_download_view(request, token):
     try:
         file_obj = StoredFile.objects.select_related('owner').get(public_token=token)
     except StoredFile.DoesNotExist:
+        logger.warning('Invalid public token requested: %s.', token)
         return JsonResponse({'error': 'Публичная ссылка недействительна.'}, status=404)
 
     absolute_path = Path(settings.MEDIA_ROOT) / file_obj.file_path
 
     if not absolute_path.exists():
+        logger.error(
+            'Public download failed for token=%s, file id=%s missing on disk.',
+            token,
+            file_obj.id,
+        )
         return JsonResponse({'error': 'Файл на диске не найден.'}, status=404)
 
     file_obj.last_downloaded_at = timezone.now()
     file_obj.save(update_fields=['last_downloaded_at'])
+
+    logger.info(
+        'Public file download for file id=%s ("%s").',
+        file_obj.id,
+        file_obj.original_name,
+    )
 
     return FileResponse(
         absolute_path.open('rb'),
