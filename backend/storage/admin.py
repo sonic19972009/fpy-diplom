@@ -1,3 +1,17 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import StoredFile
+
+
+@admin.register(StoredFile)
+class StoredFileAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'original_name',
+        'owner',
+        'size',
+        'uploaded_at',
+        'last_downloaded_at',
+    )
+    search_fields = ('original_name', 'owner__username', 'owner__email')
+    list_filter = ('uploaded_at', 'last_downloaded_at')
