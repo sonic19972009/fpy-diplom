@@ -1,18 +1,20 @@
 import json
+import logging
 
-from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from .validators import (
-    validate_username,
-    validate_user_email,
-    validate_password,
     validate_full_name,
+    validate_password,
+    validate_user_email,
+    validate_username,
 )
 
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -20,6 +22,7 @@ def parse_json_body(request):
     try:
         return json.loads(request.body.decode('utf-8'))
     except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning('Invalid JSON received in request body.')
         return None
 
 
@@ -36,6 +39,7 @@ def user_to_dict(user):
 
 def require_auth(request):
     if not request.user.is_authenticated:
+        logger.warning('Unauthorized access attempt to users endpoint.')
         return JsonResponse(
             {'error': 'Требуется аутентификация.'},
             status=401,
@@ -45,12 +49,17 @@ def require_auth(request):
 
 def require_admin(request):
     if not request.user.is_authenticated:
+        logger.warning('Unauthorized admin access attempt.')
         return JsonResponse(
             {'error': 'Требуется аутентификация.'},
             status=401,
         )
 
     if not request.user.is_staff:
+        logger.warning(
+            'User %s attempted to access admin endpoint without permissions.',
+            request.user.username,
+        )
         return JsonResponse(
             {'error': 'Недостаточно прав доступа.'},
             status=403,
@@ -94,6 +103,12 @@ def register_view(request):
         errors['password'] = password_error
 
     if errors:
+        logger.warning(
+            'User registration validation failed for username="%s", email="%s". Errors: %s',
+            username,
+            email,
+            errors,
+        )
         return JsonResponse({'errors': errors}, status=400)
 
     user = User.objects.create_user(
@@ -101,6 +116,12 @@ def register_view(request):
         full_name=full_name,
         email=email,
         password=password,
+    )
+
+    logger.info(
+        'User registered successfully: username="%s", id=%s.',
+        user.username,
+        user.id,
     )
 
     return JsonResponse(
@@ -123,12 +144,14 @@ def login_view(request):
     password = str(data.get('password', ''))
 
     if not username or not password:
+        logger.warning('Login attempt with missing username or password.')
         return JsonResponse(
             {'error': 'Необходимо указать логин и пароль.'},
             status=400,
         )
 
     if not User.objects.filter(username=username).exists():
+        logger.warning('Login attempt for non-existing username="%s".', username)
         return JsonResponse(
             {'error': 'Пользователь с таким логином не найден.'},
             status=400,
@@ -136,12 +159,15 @@ def login_view(request):
 
     user = authenticate(request, username=username, password=password)
     if user is None:
+        logger.warning('Failed login attempt for username="%s": invalid password.', username)
         return JsonResponse(
             {'error': 'Неверный пароль.'},
             status=400,
         )
 
     login(request, user)
+
+    logger.info('User logged in successfully: username="%s", id=%s.', user.username, user.id)
 
     return JsonResponse(
         {
@@ -159,7 +185,12 @@ def logout_view(request):
     if auth_error:
         return auth_error
 
+    username = request.user.username
+    user_id = request.user.id
+
     logout(request)
+
+    logger.info('User logged out successfully: username="%s", id=%s.', username, user_id)
 
     return JsonResponse(
         {'message': 'Выход выполнен успешно.'},
@@ -172,6 +203,12 @@ def me_view(request):
     auth_error = require_auth(request)
     if auth_error:
         return auth_error
+
+    logger.info(
+        'User requested own profile: username="%s", id=%s.',
+        request.user.username,
+        request.user.id,
+    )
 
     return JsonResponse(
         {'user': user_to_dict(request.user)},
@@ -186,6 +223,12 @@ def users_list_view(request):
         return admin_error
 
     users = User.objects.all().order_by('id')
+
+    logger.info(
+        'Admin %s requested users list. Users count: %s.',
+        request.user.username,
+        users.count(),
+    )
 
     return JsonResponse(
         {'users': [user_to_dict(user) for user in users]},
@@ -203,6 +246,11 @@ def user_update_view(request, user_id):
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
+        logger.warning(
+            'Admin %s attempted to update non-existing user id=%s.',
+            request.user.username,
+            user_id,
+        )
         return JsonResponse({'error': 'Пользователь не найден.'}, status=404)
 
     data = parse_json_body(request)
@@ -210,14 +258,29 @@ def user_update_view(request, user_id):
         return JsonResponse({'error': 'Некорректный JSON.'}, status=400)
 
     if 'is_admin' not in data:
+        logger.warning(
+            'Admin %s attempted to update user id=%s without is_admin field.',
+            request.user.username,
+            user_id,
+        )
         return JsonResponse(
             {'error': 'Поле is_admin обязательно.'},
             status=400,
         )
 
     is_admin = bool(data['is_admin'])
+    old_status = user.is_staff
     user.is_staff = is_admin
     user.save(update_fields=['is_staff'])
+
+    logger.info(
+        'Admin %s changed admin flag for user %s (id=%s) from %s to %s.',
+        request.user.username,
+        user.username,
+        user.id,
+        old_status,
+        is_admin,
+    )
 
     return JsonResponse(
         {
@@ -238,15 +301,33 @@ def user_delete_view(request, user_id):
     try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
+        logger.warning(
+            'Admin %s attempted to delete non-existing user id=%s.',
+            request.user.username,
+            user_id,
+        )
         return JsonResponse({'error': 'Пользователь не найден.'}, status=404)
 
     if user.id == request.user.id:
+        logger.warning(
+            'Admin %s attempted to delete own account.',
+            request.user.username,
+        )
         return JsonResponse(
             {'error': 'Нельзя удалить самого себя.'},
             status=400,
         )
 
+    deleted_username = user.username
+    deleted_user_id = user.id
     user.delete()
+
+    logger.info(
+        'Admin %s deleted user %s (id=%s).',
+        request.user.username,
+        deleted_username,
+        deleted_user_id,
+    )
 
     return JsonResponse(
         {'message': 'Пользователь удалён.'},
