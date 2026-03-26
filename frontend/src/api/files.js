@@ -16,6 +16,22 @@ export function deleteFile(fileId) {
     return apiClient.delete(`/files/${fileId}/`);
 }
 
+export function renameFile(fileId, originalName) {
+    return apiClient.patch(`/files/${fileId}/rename/`, {
+        original_name: originalName,
+    });
+}
+
+export function updateFileComment(fileId, comment) {
+    return apiClient.patch(`/files/${fileId}/comment/`, {
+        comment,
+    });
+}
+
+export function createPublicLink(fileId) {
+    return apiClient.post(`/files/${fileId}/public-link/`, {});
+}
+
 export function downloadFile(fileId) {
     window.open(`/api/files/${fileId}/download/`, '_blank');
 }
