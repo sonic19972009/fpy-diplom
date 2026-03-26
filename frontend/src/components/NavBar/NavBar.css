@@ -1,0 +1,17 @@
+.navbar {
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+}
+
+.navbar__container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.navbar__nav {
+    display: flex;
+    gap: 16px;
+}
