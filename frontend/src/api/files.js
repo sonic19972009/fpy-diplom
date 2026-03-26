@@ -5,10 +5,14 @@ export function getFiles(userId = null) {
     return apiClient.get(`/files/${query}`);
 }
 
-export function uploadFile(file, comment) {
+export function uploadFile(file, comment, userId = null) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('comment', comment || '');
+
+    if (userId) {
+        formData.append('user_id', userId);
+    }
 
     return apiClient.post('/files/upload/', formData);
 }

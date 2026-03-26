@@ -140,12 +140,30 @@ def file_upload_view(request):
 
     uploaded_file = request.FILES.get('file')
     comment = request.POST.get('comment', '').strip()
+    target_user_id = request.POST.get('user_id')
 
     if uploaded_file is None:
         logger.warning('User %s attempted upload without file.', request.user.username)
         return JsonResponse({'error': 'Файл не передан.'}, status=400)
 
     user = request.user
+
+    if request.user.is_staff and target_user_id:
+        try:
+            user = User.objects.get(pk=target_user_id)
+            logger.info(
+                'Admin %s uploads file to user %s storage.',
+                request.user.username,
+                user.username,
+            )
+        except User.DoesNotExist:
+            logger.warning(
+                'Admin %s attempted upload to non-existing user_id=%s.',
+                request.user.username,
+                target_user_id,
+            )
+            return JsonResponse({'error': 'Пользователь не найден.'}, status=404)
+
     storage_dir = ensure_user_storage_dir(user)
 
     original_name = uploaded_file.name
@@ -169,10 +187,11 @@ def file_upload_view(request):
     )
 
     logger.info(
-        'User %s uploaded file "%s" (%s bytes). Stored as "%s".',
-        user.username,
+        'User %s uploaded file "%s" (%s bytes) to owner %s. Stored as "%s".',
+        request.user.username,
         original_name,
         uploaded_file.size,
+        user.username,
         stored_name,
     )
 

@@ -43,7 +43,15 @@ export default function FilesPage() {
             return;
         }
 
-        dispatch(uploadFileThunk({ file, comment }));
+        const uploadTargetUserId =
+            user?.is_admin && selectedUserId ? selectedUserId : null;
+
+        dispatch(uploadFileThunk({
+            file,
+            comment,
+            userId: uploadTargetUserId,
+        }));
+
         setFile(null);
         setComment('');
 

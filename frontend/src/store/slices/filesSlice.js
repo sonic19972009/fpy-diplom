@@ -21,9 +21,9 @@ export const fetchFiles = createAsyncThunk(
 
 export const uploadFileThunk = createAsyncThunk(
     'files/upload',
-    async ({ file, comment }, { rejectWithValue }) => {
+    async ({ file, comment, userId = null }, { rejectWithValue }) => {
         try {
-            return await uploadFile(file, comment);
+            return await uploadFile(file, comment, userId);
         } catch (error) {
             return rejectWithValue(error.data || { error: 'Ошибка загрузки файла.' });
         }
