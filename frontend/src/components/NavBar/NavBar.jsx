@@ -20,8 +20,6 @@ export default function NavBar() {
                 </Link>
 
                 <nav className="navbar__nav">
-                    <Link to="/">Главная</Link>
-
                     {isAuthenticated ? (
                         <>
                             <Link to="/files">Мои файлы</Link>
@@ -38,6 +36,7 @@ export default function NavBar() {
                         </>
                     ) : (
                         <>
+                            <Link to="/">Главная</Link>
                             <Link to="/login">Вход</Link>
                             <Link to="/register">Регистрация</Link>
                         </>

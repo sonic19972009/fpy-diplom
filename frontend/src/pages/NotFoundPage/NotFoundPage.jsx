@@ -1,14 +1,19 @@
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 export default function NotFoundPage() {
+    const { isAuthenticated } = useSelector((state) => state.auth);
+
     return (
-        <section style={{ textAlign: 'center', marginTop: '60px' }}>
+        <section className="centered-page">
             <h1>404</h1>
             <h2>Страница не найдена</h2>
             <p>Такой страницы не существует или она была удалена.</p>
 
-            <div style={{ marginTop: '20px' }}>
-                <Link to="/">Вернуться на главную</Link>
+            <div className="form__actions" style={{ justifyContent: 'center', marginTop: '20px' }}>
+                <Link className="button" to={isAuthenticated ? '/files' : '/'}>
+                    {isAuthenticated ? 'Вернуться к моим файлам' : 'На главную'}
+                </Link>
             </div>
         </section>
     );

@@ -84,6 +84,7 @@ export const createPublicLinkThunk = createAsyncThunk(
 
 const initialState = {
     items: [],
+    currentUser: null,
     isLoading: false,
     error: null,
 };
@@ -101,20 +102,26 @@ const filesSlice = createSlice({
         clearFilesError(state) {
             state.error = null;
         },
+        clearCurrentFilesUser(state) {
+            state.currentUser = null;
+        },
     },
     extraReducers: (builder) => {
         builder
             .addCase(fetchFiles.pending, (state) => {
                 state.isLoading = true;
                 state.error = null;
+                state.currentUser = null;
             })
             .addCase(fetchFiles.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.items = action.payload.files || [];
+                state.currentUser = action.payload.user || null;
             })
             .addCase(fetchFiles.rejected, (state, action) => {
                 state.isLoading = false;
                 state.items = [];
+                state.currentUser = null;
                 state.error = action.payload;
             })
 
@@ -154,5 +161,5 @@ const filesSlice = createSlice({
     },
 });
 
-export const { clearFilesError } = filesSlice.actions;
+export const { clearFilesError, clearCurrentFilesUser } = filesSlice.actions;
 export default filesSlice.reducer;

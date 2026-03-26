@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 
 import { downloadFile } from '../../api/files';
 import {
+    clearCurrentFilesUser,
     clearFilesError,
     createPublicLinkThunk,
     deleteFileThunk,
@@ -15,7 +16,7 @@ import {
 
 export default function FilesPage() {
     const dispatch = useDispatch();
-    const { items, isLoading, error } = useSelector((state) => state.files);
+    const { items, currentUser, isLoading, error } = useSelector((state) => state.files);
     const { user } = useSelector((state) => state.auth);
     const [searchParams] = useSearchParams();
 
@@ -28,6 +29,7 @@ export default function FilesPage() {
 
     useEffect(() => {
         dispatch(clearFilesError());
+        dispatch(clearCurrentFilesUser());
 
         if (user?.is_admin && selectedUserId) {
             dispatch(fetchFiles(selectedUserId));
@@ -35,6 +37,29 @@ export default function FilesPage() {
             dispatch(fetchFiles());
         }
     }, [dispatch, user, selectedUserId]);
+
+    const isMissingUserError = error?.error === 'Пользователь не найден.';
+    const isViewingForeignStorage = Boolean(user?.is_admin && selectedUserId);
+
+    const pageTitle = useMemo(() => {
+        if (!isViewingForeignStorage) {
+            return 'Мои файлы';
+        }
+
+        if (isLoading) {
+            return 'Загрузка хранилища пользователя...';
+        }
+
+        if (isMissingUserError) {
+            return 'Хранилище пользователя недоступно';
+        }
+
+        if (currentUser?.username) {
+            return `Файлы пользователя ${currentUser.username} (ID: ${currentUser.id})`;
+        }
+
+        return 'Файлы пользователя';
+    }, [isViewingForeignStorage, isLoading, isMissingUserError, currentUser]);
 
     const handleUpload = (event) => {
         event.preventDefault();
@@ -87,7 +112,6 @@ export default function FilesPage() {
 
     const handleCommentSubmit = (fileId, currentComment) => {
         const newComment = (commentValues[fileId] ?? currentComment).trim();
-
         dispatch(updateFileCommentThunk({ fileId, comment: newComment }));
     };
 
@@ -106,121 +130,155 @@ export default function FilesPage() {
     };
 
     return (
-        <section>
-            <h1>
-                {user?.is_admin && selectedUserId
-                    ? `Файлы пользователя #${selectedUserId}`
-                    : 'Мои файлы'}
-            </h1>
+        <section className="page">
+            <h1 className="page__title">{pageTitle}</h1>
 
-            <form onSubmit={handleUpload}>
-                <input
-                    id="file-upload-input"
-                    type="file"
-                    onChange={(event) => setFile(event.target.files[0])}
-                />
+            {!isMissingUserError && !isLoading && (
+                <div className="card">
+                    <form className="form" onSubmit={handleUpload}>
+                        <div className="form__row">
+                            <label className="form__label" htmlFor="file-upload-input">
+                                Файл
+                            </label>
+                            <input
+                                className="form__input"
+                                id="file-upload-input"
+                                type="file"
+                                onChange={(event) => setFile(event.target.files[0])}
+                            />
+                        </div>
 
-                <input
-                    type="text"
-                    placeholder="Комментарий"
-                    value={comment}
-                    onChange={(event) => setComment(event.target.value)}
-                />
+                        <div className="form__row">
+                            <label className="form__label" htmlFor="upload-comment">
+                                Комментарий
+                            </label>
+                            <input
+                                className="form__input"
+                                id="upload-comment"
+                                type="text"
+                                placeholder="Комментарий"
+                                value={comment}
+                                onChange={(event) => setComment(event.target.value)}
+                            />
+                        </div>
 
-                <button type="submit">Загрузить</button>
-            </form>
+                        <div className="form__actions">
+                            <button className="button" type="submit">
+                                Загрузить
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
 
             {error && (
-                <p style={{ color: 'crimson', marginTop: '12px' }}>
+                <div className="message message--error">
                     {error.error || 'Произошла ошибка при работе с файлами.'}
-                </p>
+                </div>
             )}
 
             {isLoading ? (
                 <p>Загрузка...</p>
             ) : (
-                <ul>
+                <ul className="files-list">
                     {items.map((fileItem) => (
-                        <li key={fileItem.id} style={{ marginTop: '20px' }}>
-                            <strong>{fileItem.original_name}</strong>
-                            <br />
-                            Размер: {fileItem.size} байт
-                            <br />
-                            Комментарий: {fileItem.comment || '—'}
-                            <br />
-                            Дата загрузки: {fileItem.uploaded_at || '—'}
-                            <br />
-                            Последнее скачивание: {fileItem.last_downloaded_at || '—'}
+                        <li key={fileItem.id} className="file-card">
+                            <h2 className="file-card__title">{fileItem.original_name}</h2>
 
-                            <div style={{ marginTop: '10px' }}>
-                                <input
-                                    type="text"
-                                    placeholder="Новое имя файла"
-                                    value={renameValues[fileItem.id] ?? fileItem.original_name}
-                                    onChange={(event) =>
-                                        handleRenameChange(fileItem.id, event.target.value)
-                                    }
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handleRenameSubmit(fileItem.id, fileItem.original_name)
-                                    }
-                                    style={{ marginLeft: '8px' }}
-                                >
-                                    Переименовать
-                                </button>
+                            <p className="file-card__meta">Размер: {fileItem.size} байт</p>
+                            <p className="file-card__meta">
+                                Комментарий: {fileItem.comment || '—'}
+                            </p>
+                            <p className="file-card__meta">
+                                Дата загрузки: {fileItem.uploaded_at || '—'}
+                            </p>
+                            <p className="file-card__meta">
+                                Последнее скачивание: {fileItem.last_downloaded_at || '—'}
+                            </p>
+
+                            <div className="file-card__section">
+                                <div className="form__row">
+                                    <label className="form__label">Новое имя файла</label>
+                                    <input
+                                        className="form__input"
+                                        type="text"
+                                        value={renameValues[fileItem.id] ?? fileItem.original_name}
+                                        onChange={(event) =>
+                                            handleRenameChange(fileItem.id, event.target.value)
+                                        }
+                                    />
+                                </div>
+
+                                <div className="form__actions" style={{ marginTop: '10px' }}>
+                                    <button
+                                        className="button button--secondary"
+                                        type="button"
+                                        onClick={() =>
+                                            handleRenameSubmit(fileItem.id, fileItem.original_name)
+                                        }
+                                    >
+                                        Переименовать
+                                    </button>
+                                </div>
                             </div>
 
-                            <div style={{ marginTop: '10px' }}>
-                                <input
-                                    type="text"
-                                    placeholder="Новый комментарий"
-                                    value={commentValues[fileItem.id] ?? fileItem.comment}
-                                    onChange={(event) =>
-                                        handleCommentChange(fileItem.id, event.target.value)
-                                    }
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handleCommentSubmit(fileItem.id, fileItem.comment)
-                                    }
-                                    style={{ marginLeft: '8px' }}
-                                >
-                                    Сохранить комментарий
-                                </button>
+                            <div className="file-card__section">
+                                <div className="form__row">
+                                    <label className="form__label">Новый комментарий</label>
+                                    <input
+                                        className="form__input"
+                                        type="text"
+                                        value={commentValues[fileItem.id] ?? fileItem.comment}
+                                        onChange={(event) =>
+                                            handleCommentChange(fileItem.id, event.target.value)
+                                        }
+                                    />
+                                </div>
+
+                                <div className="form__actions" style={{ marginTop: '10px' }}>
+                                    <button
+                                        className="button button--secondary"
+                                        type="button"
+                                        onClick={() =>
+                                            handleCommentSubmit(fileItem.id, fileItem.comment)
+                                        }
+                                    >
+                                        Сохранить комментарий
+                                    </button>
+                                </div>
                             </div>
 
-                            <div style={{ marginTop: '10px' }}>
-                                <button type="button" onClick={() => downloadFile(fileItem.id)}>
-                                    Скачать
-                                </button>
+                            <div className="file-card__section">
+                                <div className="form__actions">
+                                    <button
+                                        className="button"
+                                        type="button"
+                                        onClick={() => downloadFile(fileItem.id)}
+                                    >
+                                        Скачать
+                                    </button>
 
-                                <button
-                                    type="button"
-                                    onClick={() => dispatch(deleteFileThunk(fileItem.id))}
-                                    style={{ marginLeft: '8px' }}
-                                >
-                                    Удалить
-                                </button>
+                                    <button
+                                        className="button button--danger"
+                                        type="button"
+                                        onClick={() => dispatch(deleteFileThunk(fileItem.id))}
+                                    >
+                                        Удалить
+                                    </button>
 
-                                <button
-                                    type="button"
-                                    onClick={() => handleCreatePublicLink(fileItem.id)}
-                                    style={{ marginLeft: '8px' }}
-                                >
-                                    Получить публичную ссылку
-                                </button>
+                                    <button
+                                        className="button button--secondary"
+                                        type="button"
+                                        onClick={() => handleCreatePublicLink(fileItem.id)}
+                                    >
+                                        Получить публичную ссылку
+                                    </button>
+                                </div>
                             </div>
 
                             {fileItem.public_url && (
-                                <div style={{ marginTop: '10px' }}>
-                                    <a
-                                        href={fileItem.public_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                    >
+                                <div className="file-card__section">
+                                    <a href={fileItem.public_url} target="_blank" rel="noreferrer">
                                         Открыть публичную ссылку
                                     </a>
                                 </div>

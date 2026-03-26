@@ -149,22 +149,15 @@ def login_view(request):
     if not username or not password:
         logger.warning('Login attempt with missing username or password.')
         return JsonResponse(
-            {'error': 'Необходимо указать логин и пароль.'},
-            status=400,
-        )
-
-    if not User.objects.filter(username=username).exists():
-        logger.warning('Login attempt for non-existing username="%s".', username)
-        return JsonResponse(
-            {'error': 'Пользователь с таким логином не найден.'},
+            {'error': 'Введите логин и пароль.'},
             status=400,
         )
 
     user = authenticate(request, username=username, password=password)
     if user is None:
-        logger.warning('Failed login attempt for username="%s": invalid password.', username)
+        logger.warning('Failed login attempt for username="%s".', username)
         return JsonResponse(
-            {'error': 'Неверный пароль.'},
+            {'error': 'Неверно указан логин или пароль.'},
             status=400,
         )
 
