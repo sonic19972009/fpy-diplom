@@ -59,6 +59,7 @@ const initialState = {
     user: null,
     isAuthenticated: false,
     isLoading: false,
+    isAuthChecked: false,
     error: null,
 };
 
@@ -78,11 +79,13 @@ const authSlice = createSlice({
             })
             .addCase(fetchCurrentUser.fulfilled, (state, action) => {
                 state.isLoading = false;
+                state.isAuthChecked = true;
                 state.user = action.payload;
                 state.isAuthenticated = true;
             })
             .addCase(fetchCurrentUser.rejected, (state) => {
                 state.isLoading = false;
+                state.isAuthChecked = true;
                 state.user = null;
                 state.isAuthenticated = false;
             })
@@ -93,11 +96,13 @@ const authSlice = createSlice({
             })
             .addCase(loginThunk.fulfilled, (state, action) => {
                 state.isLoading = false;
+                state.isAuthChecked = true;
                 state.user = action.payload;
                 state.isAuthenticated = true;
             })
             .addCase(loginThunk.rejected, (state, action) => {
                 state.isLoading = false;
+                state.isAuthChecked = true;
                 state.error = action.payload;
             })
 
@@ -107,11 +112,13 @@ const authSlice = createSlice({
             })
             .addCase(registerThunk.fulfilled, (state, action) => {
                 state.isLoading = false;
+                state.isAuthChecked = true;
                 state.user = action.payload;
                 state.isAuthenticated = true;
             })
             .addCase(registerThunk.rejected, (state, action) => {
                 state.isLoading = false;
+                state.isAuthChecked = true;
                 state.error = action.payload;
             })
 
@@ -121,6 +128,7 @@ const authSlice = createSlice({
             })
             .addCase(logoutThunk.fulfilled, (state) => {
                 state.isLoading = false;
+                state.isAuthChecked = true;
                 state.user = null;
                 state.isAuthenticated = false;
             })

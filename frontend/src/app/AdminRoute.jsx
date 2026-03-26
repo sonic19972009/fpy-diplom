@@ -1,11 +1,13 @@
 import { Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
-export default function AdminRoute({ children }) {
-    const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
+import ForbiddenPage from '../pages/ForbiddenPage/ForbiddenPage';
 
-    if (isLoading) {
-        return <p>Проверка прав...</p>;
+export default function AdminRoute({ children }) {
+    const { isAuthenticated, user, isAuthChecked } = useSelector((state) => state.auth);
+
+    if (!isAuthChecked) {
+        return null;
     }
 
     if (!isAuthenticated) {
@@ -13,7 +15,7 @@ export default function AdminRoute({ children }) {
     }
 
     if (!user?.is_admin) {
-        return <Navigate to="/" replace />;
+        return <ForbiddenPage />;
     }
 
     return children;

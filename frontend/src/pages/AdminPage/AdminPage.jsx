@@ -13,11 +13,13 @@ export default function AdminPage() {
     const { user } = useSelector((state) => state.auth);
 
     useEffect(() => {
-        dispatch(fetchUsers());
-    }, [dispatch]);
+        if (user?.is_admin) {
+            dispatch(fetchUsers());
+        }
+    }, [dispatch, user]);
 
     if (!user?.is_admin) {
-        return <p>Доступ запрещён</p>;
+        return null;
     }
 
     return (
@@ -48,7 +50,6 @@ export default function AdminPage() {
                                 <td>{u.is_admin ? 'Да' : 'Нет'}</td>
                                 <td>{u.files_count}</td>
                                 <td>{u.total_size}</td>
-
                                 <td>
                                     <button
                                         onClick={() =>
