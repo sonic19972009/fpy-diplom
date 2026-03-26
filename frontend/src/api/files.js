@@ -1,7 +1,8 @@
 import { apiClient } from './client';
 
-export function getFiles() {
-    return apiClient.get('/files/');
+export function getFiles(userId = null) {
+    const query = userId ? `?user_id=${userId}` : '';
+    return apiClient.get(`/files/${query}`);
 }
 
 export function uploadFile(file, comment) {

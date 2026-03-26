@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 
 import { downloadFile } from '../../api/files';
 import {
+    clearFilesError,
     createPublicLinkThunk,
     deleteFileThunk,
     fetchFiles,
@@ -14,6 +16,10 @@ import {
 export default function FilesPage() {
     const dispatch = useDispatch();
     const { items, isLoading, error } = useSelector((state) => state.files);
+    const { user } = useSelector((state) => state.auth);
+    const [searchParams] = useSearchParams();
+
+    const selectedUserId = searchParams.get('user_id');
 
     const [file, setFile] = useState(null);
     const [comment, setComment] = useState('');
@@ -21,8 +27,14 @@ export default function FilesPage() {
     const [commentValues, setCommentValues] = useState({});
 
     useEffect(() => {
-        dispatch(fetchFiles());
-    }, [dispatch]);
+        dispatch(clearFilesError());
+
+        if (user?.is_admin && selectedUserId) {
+            dispatch(fetchFiles(selectedUserId));
+        } else {
+            dispatch(fetchFiles());
+        }
+    }, [dispatch, user, selectedUserId]);
 
     const handleUpload = (event) => {
         event.preventDefault();
@@ -87,7 +99,11 @@ export default function FilesPage() {
 
     return (
         <section>
-            <h1>Мои файлы</h1>
+            <h1>
+                {user?.is_admin && selectedUserId
+                    ? `Файлы пользователя #${selectedUserId}`
+                    : 'Мои файлы'}
+            </h1>
 
             <form onSubmit={handleUpload}>
                 <input
@@ -108,7 +124,7 @@ export default function FilesPage() {
 
             {error && (
                 <p style={{ color: 'crimson', marginTop: '12px' }}>
-                    Произошла ошибка при работе с файлами.
+                    {error.error || 'Произошла ошибка при работе с файлами.'}
                 </p>
             )}
 

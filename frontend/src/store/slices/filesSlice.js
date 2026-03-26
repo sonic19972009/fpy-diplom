@@ -10,11 +10,11 @@ import {
 
 export const fetchFiles = createAsyncThunk(
     'files/fetchFiles',
-    async (_, { rejectWithValue }) => {
+    async (userId = null, { rejectWithValue }) => {
         try {
-            return await getFiles();
+            return await getFiles(userId);
         } catch (error) {
-            return rejectWithValue(error.data);
+            return rejectWithValue(error.data || { error: 'Ошибка загрузки файлов.' });
         }
     },
 );
@@ -25,7 +25,7 @@ export const uploadFileThunk = createAsyncThunk(
         try {
             return await uploadFile(file, comment);
         } catch (error) {
-            return rejectWithValue(error.data);
+            return rejectWithValue(error.data || { error: 'Ошибка загрузки файла.' });
         }
     },
 );
@@ -37,7 +37,7 @@ export const deleteFileThunk = createAsyncThunk(
             await deleteFile(fileId);
             return fileId;
         } catch (error) {
-            return rejectWithValue(error.data);
+            return rejectWithValue(error.data || { error: 'Ошибка удаления файла.' });
         }
     },
 );
@@ -49,7 +49,7 @@ export const renameFileThunk = createAsyncThunk(
             const response = await renameFile(fileId, originalName);
             return response.file;
         } catch (error) {
-            return rejectWithValue(error.data);
+            return rejectWithValue(error.data || { error: 'Ошибка переименования файла.' });
         }
     },
 );
@@ -61,7 +61,7 @@ export const updateFileCommentThunk = createAsyncThunk(
             const response = await updateFileComment(fileId, comment);
             return response.file;
         } catch (error) {
-            return rejectWithValue(error.data);
+            return rejectWithValue(error.data || { error: 'Ошибка обновления комментария.' });
         }
     },
 );
@@ -77,7 +77,7 @@ export const createPublicLinkThunk = createAsyncThunk(
                 public_url: response.public_url,
             };
         } catch (error) {
-            return rejectWithValue(error.data);
+            return rejectWithValue(error.data || { error: 'Ошибка создания публичной ссылки.' });
         }
     },
 );
@@ -97,7 +97,11 @@ const updateFileInState = (state, updatedFile) => {
 const filesSlice = createSlice({
     name: 'files',
     initialState,
-    reducers: {},
+    reducers: {
+        clearFilesError(state) {
+            state.error = null;
+        },
+    },
     extraReducers: (builder) => {
         builder
             .addCase(fetchFiles.pending, (state) => {
@@ -110,6 +114,7 @@ const filesSlice = createSlice({
             })
             .addCase(fetchFiles.rejected, (state, action) => {
                 state.isLoading = false;
+                state.items = [];
                 state.error = action.payload;
             })
 
@@ -149,4 +154,5 @@ const filesSlice = createSlice({
     },
 });
 
+export const { clearFilesError } = filesSlice.actions;
 export default filesSlice.reducer;

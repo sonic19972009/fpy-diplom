@@ -27,6 +27,7 @@ def parse_json_body(request):
 
 
 def user_to_dict(user):
+    files = user.files.all()
     return {
         'id': user.id,
         'username': user.username,
@@ -34,6 +35,8 @@ def user_to_dict(user):
         'email': user.email,
         'is_admin': user.is_staff,
         'storage_path': user.storage_path,
+        'files_count': files.count(),
+        'total_size': sum(file.size for file in files),
     }
 
 

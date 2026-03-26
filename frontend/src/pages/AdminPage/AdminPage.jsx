@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 
 import {
@@ -38,6 +39,7 @@ export default function AdminPage() {
                             <th>Админ</th>
                             <th>Файлы</th>
                             <th>Размер</th>
+                            <th>Хранилище</th>
                             <th>Действия</th>
                         </tr>
                     </thead>
@@ -49,7 +51,10 @@ export default function AdminPage() {
                                 <td>{u.full_name}</td>
                                 <td>{u.is_admin ? 'Да' : 'Нет'}</td>
                                 <td>{u.files_count}</td>
-                                <td>{u.total_size}</td>
+                                <td>{u.total_size} байт</td>
+                                <td>
+                                    <Link to={`/files?user_id=${u.id}`}>Открыть файлы</Link>
+                                </td>
                                 <td>
                                     <button
                                         onClick={() =>
