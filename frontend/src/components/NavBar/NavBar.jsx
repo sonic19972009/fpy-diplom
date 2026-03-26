@@ -1,10 +1,16 @@
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
+import { logoutThunk } from '../../store/slices/authSlice';
 import './NavBar.css';
 
 export default function NavBar() {
-    const { isAuthenticated, user } = useSelector((state) => state.auth);
+    const dispatch = useDispatch();
+    const { isAuthenticated, user, isLoading } = useSelector((state) => state.auth);
+
+    const handleLogout = () => {
+        dispatch(logoutThunk());
+    };
 
     return (
         <header className="navbar">
@@ -20,8 +26,15 @@ export default function NavBar() {
                         <>
                             <Link to="/files">Мои файлы</Link>
                             {user?.is_admin && <Link to="/admin">Админка</Link>}
-                            <span>{user?.username}</span>
-                            <button>Выход</button>
+                            <span className="navbar__user">{user?.username}</span>
+                            <button
+                                className="navbar__button"
+                                type="button"
+                                onClick={handleLogout}
+                                disabled={isLoading}
+                            >
+                                Выход
+                            </button>
                         </>
                     ) : (
                         <>

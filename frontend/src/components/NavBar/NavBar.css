@@ -1,6 +1,6 @@
 .navbar {
-    background: #fff;
-    border-bottom: 1px solid #ddd;
+    background: #ffffff;
+    border-bottom: 1px solid #dddddd;
 }
 
 .navbar__container {
@@ -9,9 +9,47 @@
     padding: 16px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.navbar__logo {
+    color: #111827;
+    text-decoration: none;
+    font-size: 22px;
+    font-weight: 700;
 }
 
 .navbar__nav {
     display: flex;
     gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.navbar__nav a {
+    text-decoration: none;
+    color: #1f2937;
+}
+
+.navbar__nav a:hover {
+    text-decoration: underline;
+}
+
+.navbar__user {
+    color: #6b7280;
+}
+
+.navbar__button {
+    border: none;
+    background-color: #111827;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.navbar__button:disabled {
+    opacity: 0.6;
+    cursor: default;
 }
