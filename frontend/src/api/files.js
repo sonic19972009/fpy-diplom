@@ -37,6 +37,10 @@ export function createPublicLink(fileId) {
     return apiClient.post(`/files/${fileId}/public-link/`, {});
 }
 
+export function deletePublicLink(fileId) {
+    return apiClient.delete(`/files/${fileId}/public-link/delete/`);
+}
+
 export function downloadFile(fileId) {
     window.open(`/api/files/${fileId}/download/`, '_blank');
 }

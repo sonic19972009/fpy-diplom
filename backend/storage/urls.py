@@ -8,6 +8,7 @@ from .views import (
     file_comment_view,
     file_download_view,
     file_public_link_view,
+    file_public_link_delete_view,
 )
 
 
@@ -19,4 +20,5 @@ urlpatterns = [
     path('files/<int:file_id>/comment/', file_comment_view, name='file-comment'),
     path('files/<int:file_id>/download/', file_download_view, name='file-download'),
     path('files/<int:file_id>/public-link/', file_public_link_view, name='file-public-link'),
+    path('files/<int:file_id>/public-link/delete/', file_public_link_delete_view, name='file-public-link-delete'),
 ]

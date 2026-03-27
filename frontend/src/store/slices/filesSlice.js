@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import {
     createPublicLink,
+    deletePublicLink,
     deleteFile,
     getFiles,
     renameFile,
@@ -15,6 +16,18 @@ export const fetchFiles = createAsyncThunk(
             return await getFiles(userId);
         } catch (error) {
             return rejectWithValue(error.data || { error: 'Ошибка загрузки файлов.' });
+        }
+    },
+);
+
+export const deletePublicLinkThunk = createAsyncThunk(
+    'files/deletePublicLink',
+    async (fileId, { rejectWithValue }) => {
+        try {
+            const response = await deletePublicLink(fileId);
+            return response.file;
+        } catch (error) {
+            return rejectWithValue(error.data || { error: 'Ошибка удаления публичной ссылки.' });
         }
     },
 );
@@ -157,6 +170,10 @@ const filesSlice = createSlice({
                           }
                         : file,
                 );
+            })
+            
+            .addCase(deletePublicLinkThunk.fulfilled, (state, action) => {
+                updateFileInState(state, action.payload);
             });
     },
 });

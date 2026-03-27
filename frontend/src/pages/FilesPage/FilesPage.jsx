@@ -8,6 +8,7 @@ import {
     clearFilesError,
     createPublicLinkThunk,
     deleteFileThunk,
+    deletePublicLinkThunk,
     fetchFiles,
     renameFileThunk,
     updateFileCommentThunk,
@@ -266,13 +267,41 @@ export default function FilesPage() {
                                         Удалить
                                     </button>
 
-                                    <button
-                                        className="button button--secondary"
-                                        type="button"
-                                        onClick={() => handleCreatePublicLink(fileItem.id)}
-                                    >
-                                        Получить публичную ссылку
-                                    </button>
+                                    {fileItem.public_url ? (
+                                        <>
+                                            <button
+                                                className="button button--secondary"
+                                                type="button"
+                                                onClick={async () => {
+                                                    const fullLink = `${window.location.origin}${fileItem.public_url}`;
+                                                    try {
+                                                        await navigator.clipboard.writeText(fullLink);
+                                                        alert('Публичная ссылка скопирована в буфер обмена.');
+                                                    } catch {
+                                                        alert(`Публичная ссылка: ${fullLink}`);
+                                                    }
+                                                }}
+                                            >
+                                                Копировать ссылку
+                                            </button>
+
+                                            <button
+                                                className="button button--secondary"
+                                                type="button"
+                                                onClick={() => dispatch(deletePublicLinkThunk(fileItem.id))}
+                                            >
+                                                Удалить ссылку
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            className="button button--secondary"
+                                            type="button"
+                                            onClick={() => handleCreatePublicLink(fileItem.id)}
+                                        >
+                                            Получить публичную ссылку
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 

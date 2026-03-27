@@ -448,3 +448,40 @@ def public_file_download_view(request, token):
         as_attachment=True,
         filename=file_obj.original_name,
     )
+
+
+@csrf_exempt
+@require_http_methods(['DELETE'])
+def file_public_link_delete_view(request, file_id):
+    auth_error = require_auth(request)
+    if auth_error:
+        return auth_error
+
+    file_obj, error_response = get_file_for_request(request, file_id)
+    if error_response:
+        return error_response
+
+    if not file_obj.public_token:
+        logger.warning(
+            'User %s attempted to delete missing public link for file id=%s.',
+            request.user.username,
+            file_id,
+        )
+        return JsonResponse({'error': 'Публичная ссылка отсутствует.'}, status=400)
+
+    file_obj.public_token = None
+    file_obj.save(update_fields=['public_token'])
+
+    logger.info(
+        'User %s deleted public link for file id=%s.',
+        request.user.username,
+        file_id,
+    )
+
+    return JsonResponse(
+        {
+            'message': 'Публичная ссылка удалена.',
+            'file': file_to_dict(file_obj),
+        },
+        status=200,
+    )
