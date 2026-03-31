@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 
+import { fetchCurrentUser } from '../../store/slices/authSlice';
 import {
     deleteUserThunk,
     fetchUsers,
@@ -27,6 +28,7 @@ function formatStorageSize(size) {
 export default function AdminPage() {
     const dispatch = useDispatch();
     const { items, isLoading, error } = useSelector((state) => state.users);
+    const { user } = useSelector((state) => state.auth);
 
     useEffect(() => {
         dispatch(fetchUsers());
@@ -52,34 +54,34 @@ export default function AdminPage() {
                 </div>
             ) : (
                 <div className="users-grid">
-                    {items.map((user) => (
-                        <div key={user.id} className="user-tile">
+                    {items.map((userItem) => (
+                        <div key={userItem.id} className="user-tile">
                             <div className="user-tile__top">
                                 <div className="user-tile__main">
-                                    <div className="user-tile__name">{user.username}</div>
-                                    <div className="user-tile__email">{user.email}</div>
+                                    <div className="user-tile__name">{userItem.username}</div>
+                                    <div className="user-tile__email">{userItem.email}</div>
                                 </div>
                             </div>
 
                             <div className="user-tile__info">
                                 <div>
-                                    <strong>Имя:</strong> {user.full_name || '—'}
+                                    <strong>Имя:</strong> {userItem.full_name || '—'}
                                 </div>
                                 <div>
-                                    <strong>Файлы:</strong> {user.files_count}
+                                    <strong>Файлы:</strong> {userItem.files_count}
                                 </div>
                                 <div>
-                                    <strong>Размер:</strong> {formatStorageSize(user.total_size)}
+                                    <strong>Размер:</strong> {formatStorageSize(userItem.total_size)}
                                 </div>
                                 <div>
                                     <strong>Роль:</strong>{' '}
-                                    {user.is_admin ? 'Администратор' : 'Пользователь'}
+                                    {userItem.is_admin ? 'Администратор' : 'Пользователь'}
                                 </div>
                             </div>
 
                             <div className="user-tile__actions">
                                 <Link
-                                    to={`/files?user_id=${user.id}`}
+                                    to={`/files?user_id=${userItem.id}`}
                                     className="button button--secondary user-tile__link-button"
                                 >
                                     Открыть файлы
@@ -88,22 +90,28 @@ export default function AdminPage() {
                                 <button
                                     className="button button--secondary"
                                     type="button"
-                                    onClick={() =>
-                                        dispatch(
+                                    onClick={async () => {
+                                        const result = await dispatch(
                                             toggleAdminThunk({
-                                                userId: user.id,
-                                                is_admin: !user.is_admin,
+                                                userId: userItem.id,
+                                                is_admin: !userItem.is_admin,
                                             }),
-                                        )
-                                    }
+                                        );
+
+                                        if (toggleAdminThunk.fulfilled.match(result)) {
+                                            if (result.payload.id === user?.id) {
+                                                dispatch(fetchCurrentUser());
+                                            }
+                                        }
+                                    }}
                                 >
-                                    {user.is_admin ? 'Снять админа' : 'Сделать админом'}
+                                    {userItem.is_admin ? 'Снять админа' : 'Сделать админом'}
                                 </button>
 
                                 <button
                                     className="button button--danger"
                                     type="button"
-                                    onClick={() => dispatch(deleteUserThunk(user.id))}
+                                    onClick={() => dispatch(deleteUserThunk(userItem.id))}
                                 >
                                     Удалить
                                 </button>
