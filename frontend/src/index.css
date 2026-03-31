@@ -317,3 +317,60 @@ input {
         display: none;
     }
 }
+
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+}
+
+.user-tile {
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.user-tile__top {
+    display: block;
+}
+
+.user-tile__main {
+    margin-bottom: 6px;
+}
+
+.user-tile__name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    word-break: break-word;
+}
+
+.user-tile__email {
+    font-size: 14px;
+    color: #6b7280;
+    word-break: break-word;
+}
+
+.user-tile__info {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 15px;
+}
+
+.user-tile__actions {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.user-tile__link-button {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
