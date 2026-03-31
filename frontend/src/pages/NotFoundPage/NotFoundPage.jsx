@@ -1,7 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+
 export default function NotFoundPage() {
+    useDocumentTitle('My Cloud — Страница не найдена');
+    
     const { isAuthenticated } = useSelector((state) => state.auth);
 
     return (

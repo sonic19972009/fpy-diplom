@@ -4,6 +4,8 @@ import { Navigate } from 'react-router-dom';
 
 import { clearAuthError, loginThunk } from '../../store/slices/authSlice';
 
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+
 function getFormError(form) {
     const usernameEmpty = !form.username.trim();
     const passwordEmpty = !form.password;
@@ -24,6 +26,8 @@ function getFormError(form) {
 }
 
 export default function LoginPage() {
+    useDocumentTitle('My Cloud — Вход');
+
     const dispatch = useDispatch();
     const { isAuthenticated, isLoading, error } = useSelector((state) => state.auth);
 

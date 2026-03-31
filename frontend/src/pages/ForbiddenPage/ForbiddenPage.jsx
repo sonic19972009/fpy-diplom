@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+
 export default function ForbiddenPage() {
+    useDocumentTitle('My Cloud — Доступ запрещён');
+
     return (
         <section className="centered-page">
             <h1>403</h1>

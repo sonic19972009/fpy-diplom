@@ -1,4 +1,8 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+
 export default function HomePage() {
+    useDocumentTitle('My Cloud — Главная');
+    
     return (
         <section className="page">
             <div className="card">

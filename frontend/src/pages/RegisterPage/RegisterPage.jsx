@@ -4,6 +4,8 @@ import { Navigate, useNavigate } from 'react-router-dom';
 
 import { clearAuthError, registerThunk } from '../../store/slices/authSlice';
 
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+
 const usernamePattern = /^[A-Za-z][A-Za-z0-9]{3,19}$/;
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const uppercasePattern = /[A-Z]/;
@@ -109,6 +111,8 @@ function renderFieldErrors(errors, fieldName = '') {
 }
 
 export default function RegisterPage() {
+    useDocumentTitle('My Cloud — Регистрация');
+
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { isAuthenticated, isLoading, error } = useSelector((state) => state.auth);

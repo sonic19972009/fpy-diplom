@@ -15,6 +15,8 @@ import {
     uploadFileThunk,
 } from '../../store/slices/filesSlice';
 
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+
 function formatFileDate(dateString) {
     if (!dateString) {
         return '—';
@@ -96,6 +98,12 @@ export default function FilesPage() {
 
         return 'Файлы пользователя';
     }, [isViewingForeignStorage, isLoading, isMissingUserError, currentUser]);
+
+    useDocumentTitle(
+    pageTitle === 'Мои файлы'
+        ? 'My Cloud — Мои файлы'
+        : `My Cloud — ${pageTitle}`,
+);
 
     const handleUpload = (event) => {
         event.preventDefault();

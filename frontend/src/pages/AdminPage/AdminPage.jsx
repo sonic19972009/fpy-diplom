@@ -9,6 +9,8 @@ import {
     toggleAdminThunk,
 } from '../../store/slices/usersSlice';
 
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+
 function formatStorageSize(size) {
     if (size === 0) {
         return '0 байт';
@@ -26,6 +28,8 @@ function formatStorageSize(size) {
 }
 
 export default function AdminPage() {
+    useDocumentTitle('My Cloud — Админка');
+
     const dispatch = useDispatch();
     const { items, isLoading, error } = useSelector((state) => state.users);
     const { user } = useSelector((state) => state.auth);
