@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.http import FileResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -98,6 +98,73 @@ def ensure_user_storage_dir(user):
     storage_dir = Path(settings.MEDIA_ROOT) / user.storage_path
     storage_dir.mkdir(parents=True, exist_ok=True)
     return storage_dir
+
+
+def render_public_link_error_page(title, message):
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{title}</title>
+        <style>
+            body {{
+                margin: 0;
+                font-family: Arial, sans-serif;
+                background: #f3f4f6;
+                color: #111827;
+            }}
+            .page {{
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+                box-sizing: border-box;
+            }}
+            .card {{
+                max-width: 520px;
+                width: 100%;
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 14px;
+                padding: 32px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+                text-align: center;
+            }}
+            h1 {{
+                margin: 0 0 12px;
+                font-size: 32px;
+            }}
+            p {{
+                margin: 0 0 24px;
+                font-size: 16px;
+                line-height: 1.5;
+                color: #4b5563;
+            }}
+            a {{
+                display: inline-block;
+                padding: 12px 18px;
+                border-radius: 8px;
+                background: #111827;
+                color: #ffffff;
+                text-decoration: none;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="page">
+            <div class="card">
+                <h1>{title}</h1>
+                <p>{message}</p>
+                <a href="/">Вернуться на главную</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return HttpResponse(html, status=404)
 
 
 @require_http_methods(['GET'])
@@ -422,7 +489,10 @@ def public_file_download_view(request, token):
         file_obj = StoredFile.objects.select_related('owner').get(public_token=token)
     except StoredFile.DoesNotExist:
         logger.warning('Invalid public token requested: %s.', token)
-        return JsonResponse({'error': 'Публичная ссылка недействительна.'}, status=404)
+        return render_public_link_error_page(
+            'Ссылка недействительна',
+            'Файл недоступен. Ссылка устарела или была удалена.',
+        )
 
     absolute_path = Path(settings.MEDIA_ROOT) / file_obj.file_path
 
@@ -432,7 +502,10 @@ def public_file_download_view(request, token):
             token,
             file_obj.id,
         )
-        return JsonResponse({'error': 'Файл на диске не найден.'}, status=404)
+        return render_public_link_error_page(
+            'Файл не найден',
+            'Файл больше недоступен на сервере.',
+        )
 
     file_obj.last_downloaded_at = timezone.now()
     file_obj.save(update_fields=['last_downloaded_at'])
